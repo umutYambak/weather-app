@@ -1,121 +1,81 @@
-import { useState} from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import './App.css';
-
+import React, { useState } from 'react';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { useWeather } from './hooks/useWeather';
+import { MapController, MapEvents } from './components/MapElements';
 import SearchBar from './components/SearchBar';
 import WeatherDisplay from './components/WeatherDisplay';
 import WeatherDetails from './components/WeatherDetails';
 import Forecast from './components/Forecast';
-import { fetchWeather, fetchForecast, fetchAltitude, fetchWeatherByCoords } from './services/weatherService';
-import type { WeatherData, ForecastData } from './types/weather';
+import WeatherAnimation from './components/WeatherAnimation';
+import './App.css';
 
-// Harita olaylarını dinleyen yardımcı bileşen
-function MapEvents({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
-  useMapEvents({
-    click: (e) => {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    }
-  });
-  return null;
-}
-
-function App() {
+export default function App() {
+  const { primary, setPrimary, secondary, setSecondary, topCities, getFullData, getFullDataByName, loading } = useWeather();
   const [city, setCity] = useState("");
-  const [weather, setWeather] = useState<WeatherData | null>(null);
-  const [forecast, setForecast] = useState<ForecastData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [target, setTarget] = useState<1 | 2>(1);
+  const [center, setCenter] = useState<[number, number]>([39, 35]);
 
-  const getTheme = (main: string | undefined) => {
-    if (!main) return '#020617';
-    const themes: Record<string, string> = { 
-      Clear: 'linear-gradient(180deg, #020617 0%, #075985 100%)',
-      Clouds: 'linear-gradient(180deg, #020617 0%, #334155 100%)',
-      Rain: 'linear-gradient(180deg, #020617 0%, #1e3a8a 100%)',
-      Thunderstorm: 'linear-gradient(180deg, #020617 0%, #1e1b4b 100%)',
-      Snow: 'linear-gradient(180deg, #020617 0%, #475569 100%)'
-    };
-    return themes[main] || '#020617';
+  const onSearch = async (name?: string) => {
+    try {
+      const data = await getFullDataByName(name || city);
+      if (target === 1) { setPrimary(data); setSecondary(null); setCenter([data.weather.coord.lat, data.weather.coord.lon]); }
+      else setSecondary(data);
+      setCity("");
+    } catch { alert("Hata!"); }
   };
 
-// HARİTAYA TIKLAYINCA
-const handleMapClick = async (lat: number, lng: number) => {
-  if (loading) return; 
-  setLoading(true);
-  try {
-    const w = await fetchWeatherByCoords(lat, lng);
-    const a = await fetchAltitude(lat, lng);
-    // Burası hep 2 parametre (lat, lng) alacak
-    const f = await fetchForecast(lat, lng); 
-    
-    setWeather({ ...w, altitude: a });
-    setForecast(f);
-    setCity(w.name);
-  } catch (err) {
-    console.error("Harita Hatası:", err);
-  } finally {
-    setLoading(false); // Kilit her durumda açılır
-  }
-};
+  const onMapAction = async (lat: number, lon: number, isSec: boolean) => {
+    const data = await getFullData(lat, lon);
+    if (isSec) { setSecondary(data); setTarget(2); } 
+    else { setPrimary(data); setSecondary(null); setCenter([lat, lon]); setTarget(1); }
+  };
 
-// ARAMA YAPINCA
-const handleSearch = async () => {
-  if (!city.trim() || loading) return;
-  setLoading(true);
-  try {
-    // 1. Önce şehri bul (Bu bize koordinatları getirecek: w.coord.lat, w.coord.lon)
-    const w = await fetchWeather(city);
-    
-    // 2. Şehirden gelen koordinatlarla diğer verileri çek
-    const a = await fetchAltitude(w.coord.lat, w.coord.lon);
-    const f = await fetchForecast(w.coord.lat, w.coord.lon); 
-    
-    setWeather({ ...w, altitude: a });
-    setForecast(f);
-  } catch (err) {
-    console.error("Arama Hatası:", err);
-    alert("Şehir bulunamadı veya bir hata oluştu!");
-  } finally {
-    setLoading(false); // Kilit her durumda açılır
-  }
-};
   return (
-    <div className="app-container">
-      {/* SOL PANEL */}
-      <div className="sidebar" style={{ 
-        background: weather ? getTheme(weather.weather[0].main) : '#020617',
-        justifyContent: weather ? 'space-between' : 'flex-start'
-      }}>
-        <SearchBar city={city} setCity={setCity} handleSearch={handleSearch} loading={loading} />
-        {weather && (
-          <>
-            <WeatherDisplay weather={weather} />
-            <WeatherDetails weather={weather} />
-            {forecast && <Forecast forecast={forecast} />}
-          </>
-        )}
-      </div>
+    <div className={`app-container ${secondary ? 'compare-mode' : ''}`}>
+      <aside className="sidebar">
+        <WeatherAnimation type={primary?.weather.weather[0].main} />
+        <div className="sidebar-main-wrapper">
+          <header className="search-controls">
+            <div className="target-toggle">
+              {[1, 2].map(num => (
+                <button key={num} className={target === num ? 'active' : ''} onClick={() => setTarget(num as 1 | 2)}>
+                  {num}. Şehir {num === 2 && "(Ekle)"}
+                </button>
+              ))}
+            </div>
+            <SearchBar city={city} setCity={setCity} handleSearch={() => onSearch()} loading={loading} />
+            <div className="top-cities-box">
+              {topCities.map((c, i) => (
+                <button key={c.name} className="top-city-tag" onClick={() => onSearch(c.name)}>
+                  <span className="rank">{i+1}.</span> {c.name} <span className="count-badge">{c.count}</span>
+                </button>
+              ))}
+            </div>
+          </header>
 
-      {/* SAĞ PANEL (HARİTA) */}
-      <div className="map-section">
-        <MapContainer 
-          center={[39, 35]} 
-          zoom={6} 
-          style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={true}
-        >
+          <main className="compare-grid">
+            {[primary, secondary].map((data, i) => data && (
+              <div key={i} className={`city-column ${i === 1 ? 'secondary-column' : ''}`}>
+                <p className="column-label">{i === 0 ? 'ANA ŞEHİR' : 'KARŞILAŞTIRILAN'}</p>
+                <WeatherDisplay weather={data.weather} />
+                <WeatherDetails weather={data.weather} />
+                <Forecast forecast={data.forecast} />
+                {i === 1 && <button className="close-compare-btn" onClick={() => setSecondary(null)}>Kapat</button>}
+              </div>
+            ))}
+          </main>
+        </div>
+      </aside>
+
+      <section className="map-section">
+        <MapContainer center={center} zoom={6} style={{ height: '100%' }}>
           <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
-          <MapEvents onMapClick={handleMapClick} />
-          {weather && (
-            <Marker 
-              position={[weather.coord.lat, weather.coord.lon]} 
-              interactive={false} 
-            />
-          )}
+          <MapController center={center} />
+          <MapEvents onSelect={onMapAction} />
+          {primary && <Marker position={[primary.weather.coord.lat, primary.weather.coord.lon]} />}
+          {secondary && <Marker position={[secondary.weather.coord.lat, secondary.weather.coord.lon]} />}
         </MapContainer>
-      </div>
+      </section>
     </div>
   );
-}
-
-export default App;
+};

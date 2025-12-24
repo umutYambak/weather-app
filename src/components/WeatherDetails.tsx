@@ -15,9 +15,9 @@ const InfoCard = ({ icon, label, value }: { icon: string, label: string, value: 
 
 const WeatherDetails: React.FC<{ weather: WeatherData }> = ({ weather }) => (
   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', margin: '20px 0' }}>
-    <InfoCard icon="🌡️" label="Hiss." value={`${Math.round(weather.main.feels_like)}°`} />
+    <InfoCard icon="🌡️" label="Hiss." value={`${Math.round(weather.main.feels_like)}°C`} />
     <InfoCard icon="💧" label="Nem" value={`%${weather.main.humidity}`} />
-    <InfoCard icon="💨" label="Rüzgar" value={`${weather.wind.speed}k`} />
+    <InfoCard icon="💨" label="Rüzgar" value={`${weather.wind.speed}km/h`} />
     <InfoCard icon="⏲️" label="Basınç" value={`${weather.main.pressure}`} />
     <InfoCard icon="⛰️" label="Rakım" value={`${Math.round(weather.altitude || 0)}m`} />
     <InfoCard icon="🌅" label="G.Doğ" value={new Date(weather.sys.sunrise * 1000).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})} />
