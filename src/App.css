@@ -1,0 +1,69 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body, html {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ana Layout Konteyneri */
+.app-container {
+  display: grid;
+  grid-template-columns: 40% 60%;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background-color: #020617;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Sol Panel */
+.sidebar {
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: all 0.5s ease;
+}
+
+/* Sağ Panel (Harita) */
+.map-section {
+  height: 100%;
+  width: 100%;
+}
+
+/* --- RESPONSIVE AYARLAR (Tablet ve Mobil) --- */
+@media (max-width: 1024px) {
+  .app-container {
+    grid-template-columns: 100%; /* Sütunları teke indir */
+    grid-template-rows: auto 500px; /* Üstte bilgi, altta 500px harita */
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .sidebar {
+    padding: 20px;
+    height: auto;
+    min-height: 100vh; /* Bilgi ekranı en az bir ekran boyu kaplasın */
+  }
+
+  .map-section {
+    height: 500px; /* Mobil ekranlarda harita sabit bir yükseklikte kalsın */
+  }
+}
+
+/* Küçük Telefonlar İçin Ekstra Ayar */
+@media (max-width: 640px) {
+  .sidebar h1 {
+    font-size: 1.5rem !important;
+  }
+  
+  /* 4'lü kartları mobilde 2'li yap */
+  .info-grid-responsive {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
