@@ -29,7 +29,10 @@ export default function App() {
     if (isSec) { setSecondary(data); setTarget(2); } 
     else { setPrimary(data); setSecondary(null); setCenter([lat, lon]); setTarget(1); }
   };
+    
 
+
+  
   return (
     <div className={`app-container ${secondary ? 'compare-mode' : ''}`}>
       <aside className="sidebar">
